@@ -1,6 +1,7 @@
 - 👋 Hi, I’m  Rajesh Natarajan @rajesh-natarajan-tech
 - 👀 I’m interested in Kubernetes  Automation ...
-- 🌱 I’m currently learning Python 
+- 🌱 I’m currently learning Python
+-  I am working as Kupernetes Operation Engineers , Main Focus on the TANZU
 -- 📫 How to reach me ... n.rajeshnadar@gmail.com
 
 
