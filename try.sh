@@ -11,15 +11,10 @@ OVERRIDES_JSON=$(cat <<EOF
 {
   "apiVersion": "v1",
   "spec": {
-    "imagePullSecrets": [
-      {
-        "name": "regcred"
-      }
-    ],
     "containers": [
       {
         "name": "jumpbox",
-        "image": "sv4.art.e2open.com/dcops-docker-repo/jumphost:v01",
+        "image": "ghcr.io/rajesh-natarajan-tech/jumphost:v01",
         "stdin": true,
         "stdinOnce": true,
         "tty": true,
