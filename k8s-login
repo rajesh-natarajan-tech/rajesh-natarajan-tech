@@ -1,0 +1,395 @@
+#!/bin/bash
+
+CONF_FILE=/etc/k8s-login.conf
+
+if test ! -f $CONF_FILE; then
+    echo "Config file ($CONF_FILE) not found"
+    exit 1
+fi
+
+if grep -q "$(whoami):" /etc/passwd; then
+    echo "$0 not allowed to execute by local OS user"
+    exit 1
+fi
+
+LOGGER(){
+    local message="$1"
+    LOGGER_COMMAND="logger -p local1.info"
+    $LOGGER_COMMAND "($(basename $0)) {$KUBECTL_VSPHERE_USER} $1"
+}
+
+KUBECTL_VSPHERE_USER="$(whoami | cut -d '@' -f1)@prod.homelab.com"
+log_message="Execute: $0 $@"
+LOGGER "$log_message"
+
+MY_HOSTNAME=$(hostname -s)
+config_file="${HOME}/.k8s-login"
+SUPERVISOR_CLUSTER_PORT=443
+FZFOPTIONS="--layout reverse-list --border top --no-info"
+CLUSTER_LIST_FILE="/tmp/.cluster_list.txt"
+# uncomment this to add numbers to the cluster list
+#NUMBERING=1
+# uncomment this to enable debug output
+#DEBUG=1
+
+#get command line options
+opt=""
+while [ "$#" -gt 0 ]; do
+    opt=${1}
+    case "${opt}" in
+        --help|help|-h|h)
+            echo "Usage: $0 [cluster]"
+            echo
+            echo "Options:"
+            echo "  -h, --help, help  Display this help message"
+            echo "  -q, --quiet, q    Quiet mode"
+            echo "  -c, --cluster     Specify cluster"
+            echo "  -n, --num         Add numbers to the cluster list"
+            echo "  -l  --list        List clusters"
+            echo "  -j  --jumphost    List jump hosts"
+            echo "  -i  --info        homelab k8s reference info"
+            echo "  --reset           Reset config file and remove encrypted password"
+            echo
+            exit 0
+            ;;
+        -q|--quiet|q)
+            QUIET=1
+            ;;
+        "--cluster="*)
+            clusterinput="${opt#*=}"
+            ;;
+        -c)
+            shift
+            clusterinput="${1}"
+            ;;
+        -n|--num|--numbering)
+            NUMBERING=1
+            ;;
+        -l|--list)
+            LISTCLUSTERS=1
+            ;;
+        -x|--super)
+            SUPERLOGIN=1
+            ;;
+        -i|--info)
+          INFO=1
+            ;;
+        -j|--jump|--jumphost)
+          JUMPINFO=1
+            ;;
+        --reset)
+            rm -iv ${HOME}/.k8s-login
+            exit 1
+            ;;
+        --debug)
+            DEBUG=1
+            ;;
+        *)
+            echo "Invalid option"
+            exit 1
+        ;;
+    esac
+    shift
+done
+
+# info helper
+if [ -n "$INFO" ]; then
+    cat << EOF
+ - To access your namespace:
+  k8s-login
+
+ - To list all the clusters available from this jump host:
+  k8s-login --list
+
+ - To find another jump host:
+  k8s-login --jumphost
+
+ - For more help:
+  k8s-login --help
+
+ - Check the message of the day after login:
+  cat /etc/motd
+
+
+EOF
+    LOGGER "Helper: Info"
+    exit 0
+fi
+
+# show jump hosts
+if [ -n "$JUMPINFO" ]; then
+    # echo $LIST | sed -e 's/\ /\r\n/g' | cut -d\| -f 1,5 | sed -e 's/|/\t/g'
+    echo
+    format="%-25s %-25s %-25s %-25s\n"
+    printf "$format" "Environment" "Datacentre Location" "Supervisor Name" "Supervisor Cluster"
+    printf "$format" "-----------" "-------------------" "---------------" "------------------"
+
+    for i in $(seq 1 $(grep ENVIRONMENT= $CONF_FILE | wc -l)); do
+        environment=$(grep ENVIRONMENT= $CONF_FILE | head -n${i} | tail -1 | cut -d= -f2)
+        datacentre_location=$(grep DATACENTRE_LOCATION= $CONF_FILE | head -n${i} | tail -1 | cut -d= -f2)
+        supervisor_name=$(grep SUPERVISOR_NAME= $CONF_FILE | head -n${i} | tail -1 | cut -d= -f2)
+        supervisor_cluster=$(grep SUPERVISOR_CLUSTER= $CONF_FILE | head -n${i} | tail -1 | cut -d= -f2)
+        printf "$format" "${environment//_/ }" "$datacentre_location" "$supervisor_name" "$supervisor_cluster"
+    done
+    echo
+
+    LOGGER "Helper: Jump Host Info"
+    exit 0
+fi
+
+
+# set up FZF path and options
+if [ $(which fzf 2>/dev/null) ] ; then
+    FZF="$(which fzf) ${FZFOPTIONS}"
+elif [ -f /var/tmp/fzf  ]; then
+    FZF="/var/tmp/fzf ${FZFOPTIONS}"
+else
+    # if fzf is not installed, download it to /var/tmp
+    # get latest version of fzf from github and remove the v from the version
+    fzfver=$(curl -sSL  https://github.com/junegunn/fzf/releases/latest | grep "fzf/tree" | grep -o "v[0-9]*\.[0-9]*\.[0-9]*" | head -1 | sed 's/v//')
+    # download fzf and extract to /var/tmp
+    curl -sSL https://github.com/junegunn/fzf/releases/download/v${fzfver}/fzf-${fzfver}-linux_amd64.tar.gz -o /var/tmp/fzf.tar.gz
+    tar -xvf /var/tmp/fzf.tar.gz -C /var/tmp && rm -f /var/tmp/fzf.tar.gz
+    FZF="/var/tmp/fzf ${FZFOPTIONS}"
+fi
+# if $FZF is not set exit
+[ -z "$FZF" ] && echo "fzf not found" && exit 1
+
+store_password(){
+    echo
+
+    local ans=$(echo -e "Yes\nNo\n" | $FZF --prompt="Store the AD password with encryption? ")
+
+    case "$ans" in
+        "Yes")
+            echo
+            echo "Enter a Passcode to encrypt your PROD AD Password stored in $config_file"
+            echo "You will use this passcode to login with this script"
+            echo "   (the default is your PROD AD Password)"
+            read -p "New Passcode: " -s PASSCODE
+            echo
+            [[ "$PASSCODE"x = "x" ]] && PASSCODE=$KUBECTL_VSPHERE_PASSWORD
+            encryptPW=$(echo $KUBECTL_VSPHERE_PASSWORD | openssl aes-256-cbc -a -salt -pass pass:$(whoami)$PASSCODE $OPENSSL_OPTS)
+            echo "encryptPW=$encryptPW" >> $config_file
+        ;;
+    esac
+}
+
+# OpenSSL Version
+openssl_version=$(openssl version)
+if [[ $openssl_version =~ "1.1.1" ]]; then
+    OPENSSL_OPTS="$OPENSSL_OPTS -pbkdf2"
+fi
+
+submit_ticket_info(){
+    echo "Please refer to:
+
+https://confluence.dev.homelab.com/display/KUBE/Access+to+K8S+via+vSphere
+
+"
+
+    LOGGER "Failed to login vSphere: DC-ENV=\"${ENVIRONMENT//_/ }\""
+
+    echo
+    exit 1
+}
+
+
+inital_setup(){
+
+    source $CONF_FILE
+
+
+    if test -z "$ENVIRONMENT"; then
+        echo "Environment not found"
+        exit 1
+    fi
+
+
+
+    echo
+    if [ -n "$QUIET" ]; then
+        echo "========== Inital Setup ========== (Quiet disabled)"
+    else
+        echo "========== Inital Setup =========="
+    fi
+    echo
+    echo "PROD AD Username: $KUBECTL_VSPHERE_USER"
+    read -p "PROD AD Password: " -s KUBECTL_VSPHERE_PASSWORD
+    echo
+
+    echo "Verify your account by login VSphere ..."
+    echo
+    echo "====================================================="
+    echo "DC-ENV         = ${ENVIRONMENT//_/ }"
+    echo "vSphere User   = $KUBECTL_VSPHERE_USER"
+    echo "====================================================="
+    echo
+
+    export KUBECTL_VSPHERE_PASSWORD
+
+    kubectl vsphere login --server=$SUPERVISOR_CLUSTER --insecure-skip-tls-verify -u $KUBECTL_VSPHERE_USER > /dev/null
+    res=$?
+
+    if test $res -eq 0; then
+        echo "Login Success"
+    else
+        submit_ticket_info
+    fi
+
+    echo "ENVIRONMENT=$ENVIRONMENT" > $config_file
+    echo "DATACENTRE_LOCATION=$DATACENTRE_LOCATION" >> $config_file
+    echo "SUPERVISOR_NAME=$SUPERVISOR_NAME" >> $config_file
+    echo "SUPERVISOR_CLUSTER=$SUPERVISOR_CLUSTER" >> $config_file
+    echo "KUBECTL_VSPHERE_USER=$KUBECTL_VSPHERE_USER" >> $config_file
+
+    chmod 0600 $config_file
+
+    echo
+    echo "Inital setup done. Config saved to $config_file"
+    echo
+    export KUBECTL_VSPHERE_USER
+
+}
+
+if ! test -f $config_file; then
+   inital_setup
+fi
+
+. $config_file
+
+if test ! -e $encryptPW && test -e $PASSCODE; then
+    read -p "Passcode: " -s PASSCODE
+    echo
+
+    KUBECTL_VSPHERE_PASSWORD=$(echo $encryptPW | openssl aes-256-cbc -d -a -pass pass:$(whoami)$PASSCODE $OPENSSL_OPTS)
+    res=$?
+
+    if test $res -ne 0; then
+        echo "Invaild Passcode"
+        echo
+        echo "If you need to reset Passcode, please execute"
+        echo
+        echo "  $0 --reset"
+        echo
+        LOGGER "Invaild passcode: DC-ENV=\"${ENVIRONMENT//_/ }\""
+        exit 1
+    fi
+
+elif test -e $KUBECTL_VSPHERE_PASSWORD; then
+    echo "PROD AD Username: $KUBECTL_VSPHERE_USER"
+    read -p "PROD AD Password: " -s KUBECTL_VSPHERE_PASSWORD
+    echo
+fi
+
+export KUBECTL_VSPHERE_PASSWORD
+
+[ -z "$QUIET" ] && echo "Logging into Supervisor cluster ($SUPERVISOR_CLUSTER)..."
+
+kubectl vsphere login --server=$SUPERVISOR_CLUSTER --insecure-skip-tls-verify -u $KUBECTL_VSPHERE_USER > /dev/null
+res=$?
+
+if test $res -ne 0; then
+    echo
+    echo "Login Failed"
+    echo
+    test -f $config_file && rm -v $config_file
+    echo
+    echo "Please re-run $0 to update password"
+    echo
+    LOGGER "Authentication failed: DC-ENV=\"${ENVIRONMENT//_/ }\""
+    exit 1
+fi
+
+grep -q "encryptPW=" $config_file || store_password
+
+# set -e
+
+# generate cluster list
+kubectl config use-context $SUPERVISOR_CLUSTER > /dev/null
+
+if [ -n "$SUPERLOGIN" ]; then
+  [ -z "$QUIET" ] && echo "Logged into Supervisor cluster ($SUPERVISOR_CLUSTER)"
+  LOGGER "Helper: SupervisorLogin"
+  exit 0
+fi
+
+i=0
+cluster_list=$(kubectl get cluster -A --no-headers | awk '{ print $2}' | sort)
+res=$?
+
+if test $res -ne 0; then
+    echo "Fail to get cluster list"
+    echo "Please follow with DC Ops"
+    LOGGER "Get cluster list failed: DC-ENV=\"${ENVIRONMENT//_/ }\""
+    exit 1
+fi
+
+# echo $cluster_list > $CLUSTER_LIST_FILE
+# chmod 0777 $CLUSTER_LIST_FILE
+
+declare -A CLUSTERS
+
+for cluster in $cluster_list; do
+    i=$((i+1))
+    CLUSTERS["$i"]=$cluster
+    # if numbering is set, add the cluster number to the cluster name with a space to be parsed out later "$i $cluster"
+    [ -n "$NUMBERING" ] && cluster_string="${cluster_string}${i} ${cluster}\n" || cluster_string="${cluster_string}${cluster}\n"
+done
+
+[ -z "$QUIET" ] && echo
+
+if test $i -eq 0; then
+    echo "No cluster found"
+    exit
+fi
+
+if [ -n "$LISTCLUSTERS" ]; then
+  echo -e $cluster_string | awk /./
+  LOGGER "Helper: ListClusters"
+  exit 0
+fi
+
+# if a cluster is given as an argument, use that, otherwise select a cluster from cluster_string
+if [ -n "$clusterinput" ]; then
+    # if $cli is a member of the cluster list, set $s to the cluster name
+    for i in "${!CLUSTERS[@]}"; do
+        if [ "${CLUSTERS[$i]}" = "$clusterinput" ]; then
+            s=$clusterinput
+            break
+        fi
+    done
+    unset NUMBERING
+    # if $s is not set, $clusterinput is not a member of the cluster list
+    if [ -z "$s" ]; then
+        echo "Cluster $clusterinput not found"
+        exit
+    fi
+else
+    # select a cluster
+    s=$(echo -e $cluster_string | awk /./ | $FZF --prompt="[$ENVIRONMENT] Select Cluster > "
+    )
+fi
+
+# get the cluster name without numbering
+[ -n "$NUMBERING" ] && cluster=$(echo "$s" | awk '{print $2'}) || cluster="$s"
+
+namespace=$(kubectl get cluster -A | grep " $cluster " | awk '{print $1}')
+
+[ -n "$DEBUG" ] && echo && echo "Login ${ENVIRONMENT//_/ } / $DATACENTRE_LOCATION / $SUPERVISOR_NAME / $cluster / ${namespace} ..."
+
+[ -n "$DEBUG" ] && echo kubectl vsphere login --server=$SUPERVISOR_CLUSTER --insecure-skip-tls-verify --tanzu-kubernetes-cluster-namespace=${namespace} --tanzu-kubernetes-cluster-name=$cluster -u $KUBECTL_VSPHERE_USER
+kubectl vsphere login --server=$SUPERVISOR_CLUSTER --insecure-skip-tls-verify --tanzu-kubernetes-cluster-namespace=${namespace} --tanzu-kubernetes-cluster-name=$cluster -u $KUBECTL_VSPHERE_USER > /dev/null
+
+if [ -z "$QUIET" ]; then
+#    clear
+    echo
+    echo "==============================================="
+    echo "DC-ENV         = ${ENVIRONMENT//_/ }"
+    echo "Cluster        = $cluster"
+    echo "==============================================="
+fi
+kubectl config use-context ${cluster}
+[ -z "$QUIET" ] && echo
+
+LOGGER "Login succeed: DC-ENV=\"${ENVIRONMENT//_/ }\" Cluster=$cluster"
