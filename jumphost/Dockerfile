@@ -19,7 +19,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash -d /home/vmware-system-user  vmware-system-user
-COPY  startup.sh node-login.sh    /usr/local/bin/
+COPY   node-login.sh    /usr/local/bin/
 # Download and install kubectl
 RUN echo "Downloading kubectl version: ${KUBECTL_VERSION}" && \
     # Determine the actual version string (handle "latest")
@@ -52,7 +52,8 @@ RUN echo 'source <(kubectl completion bash)' >>/home/vmware-system-user/.bashrc
 RUN echo 'alias k=kubectl' >> /home/vmware-system-user/.bashrc
 RUN echo 'complete -F __start_kubectl k' >> /home/vmware-system-user/.bashrc
 RUN echo 'export KUBECONFIG=/secrets/kubeconfig/value' >> /home/vmware-system-user/.bashrc
-RUN echo 'sh /usr/local/bin/node-login.sh' >> /home/vmware-system-user/.bashrc
+RUN echo 'echo "execute  node-login.sh to login to worker nodes"'  >> /home/vmware-system-user/.bashrc
+RUN echo 'bash /usr/local/bin/node-login.sh' >> /home/vmware-system-user/.bashrc
 
 RUN mkdir -p /home/vmware-system-user/.kube/ 
 # Default command to run when container starts (optional, provides a shell)

@@ -4,7 +4,9 @@ This Script for the login to tanzu worker node using jumphost container,
 Tanzu Kubernetes envionment secured by NSX-T Network Backend with Isolated T1 Networks, on which we cannot connect worker nodes from external network.
 This Scirt Symplifies the troubleshooting login
 
-This Script for the DCops team members 
+This Script allowed to execute by DCops team members only 
+
+Author: Rajesh 
 
 END
 source /etc/k8s-login.conf
