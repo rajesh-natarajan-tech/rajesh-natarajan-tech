@@ -50,62 +50,83 @@ fi
 
 
 
-echo ${empty_line}
-echo $vns 
-export ssh_secre=t${cluster}-ssh
-export cluster_kubeconfig=${cluster}-kubeconfig
 
 
 
 #
+
+NAMESPACE=${vns}
+PODNAME="${cluster}-jumphost"
+SSH_SECRET="${cluster}-ssh"
+KUBECFG_SECRET="${cluster}-kubeconfig"
+
+kubectl get pods -n $NAMESPACE  $PODNAME && kubectl delete pod -n $NAMESPACE  $PODNAME
+
+# --- Construct the overrides JSON using a heredoc ---
 OVERRIDES_JSON=$(cat <<EOF
+{
   "apiVersion": "v1",
   "spec": {
     "containers": [
       {
-        "name": "jumphost",
-        "image": "ghcr.io/rajesh-natarajan-tech/jumphost:v01",
-        "args": [
-          "bash"
-        ],
+        "name": "jumpbox",
+        "image": "nrajeshdit/jumphost:v01",
+        "imagePullPolicy": "IfNotPresent",
         "stdin": true,
         "stdinOnce": true,
+        "securityContext": {
+           "allowPrivilegeEscalation": false,
+           "capabilities": {
+               "drop": [
+                            "ALL"
+               ]
+            },
+            "runAsNonRoot": true,
+            "runAsUser": 1000,
+            "seccompProfile": {
+                "type": "RuntimeDefault"
+            }
+           },
+
         "tty": true,
         "volumeMounts": [
           {
             "mountPath": "/secrets/ssh-secret",
-            "name": "ssh-secret"
+            "name": "ssh-secret-volume",
+            "readOnly": true
           },
           {
-            "mountPath": "/secrets/kubeconig",
-            "name": "kubeconig"
+            "mountPath": "/secrets/kubeconfig",
+            "name": "kubeconfig-volume",
+            "readOnly": true
           }
         ]
       }
     ],
     "volumes": [
       {
-        "name": "ssh-secret",
+        "name": "ssh-secret-volume",
         "secret": {
-          "secretName": "${ssh_secret}"
+          "secretName": "${SSH_SECRET}"
         }
       },
       {
-        "name": "kubeconig",
+        "name": "kubeconfig-volume",
         "secret": {
-          "secretName": "${cluster_kubeconfig}"
+          "secretName": "${KUBECFG_SECRET}"
         }
       }
     ]
   }
 }
-
 EOF
 )
 
-kubectl run -n "${vns}" -i --rm --tty "${cluster}-jumpbox" \
+# --- Run kubectl, passing the generated JSON in double quotes ---
+# Note: Use the variables defined above for other flags too
+kubectl run -n "${NAMESPACE}" -i --rm --tty "${PODNAME}" \
   --overrides="${OVERRIDES_JSON}" \
-  --image=sv4.art.e2open.com/dcops-docker-repo/jumphost:v01  --restart=Never -- bash
+  --image=nrajeshdit/jumphost:v01 --restart=Never -- bash
 
 
 

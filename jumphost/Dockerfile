@@ -51,7 +51,10 @@ USER vmware-system-user
 RUN echo 'source <(kubectl completion bash)' >>/home/vmware-system-user/.bashrc
 RUN echo 'alias k=kubectl' >> /home/vmware-system-user/.bashrc
 RUN echo 'complete -F __start_kubectl k' >> /home/vmware-system-user/.bashrc
+RUN echo 'export KUBECONFIG=/secrets/kubeconfig/value' >> /home/vmware-system-user/.bashrc
+RUN echo 'sh /usr/local/bin/node-login.sh' >> /home/vmware-system-user/.bashrc
+
+RUN mkdir -p /home/vmware-system-user/.kube/ 
 # Default command to run when container starts (optional, provides a shell)
-ENTRYPOINT [ "/usr/local/bin/startup.sh" ]
 CMD ["bash"]
 

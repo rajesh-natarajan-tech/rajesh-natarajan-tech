@@ -14,9 +14,24 @@ OVERRIDES_JSON=$(cat <<EOF
     "containers": [
       {
         "name": "jumpbox",
-        "image": "ghcr.io/rajesh-natarajan-tech/jumphost:v01",
+        "image": "nrajeshdit/jumphost:v01",
+        "imagePullPolicy": "Always",
         "stdin": true,
         "stdinOnce": true,
+        "securityContext": {
+           "allowPrivilegeEscalation": false,
+           "capabilities": {
+               "drop": [
+                            "ALL"
+               ]
+            }, 
+            "runAsNonRoot": true,
+            "runAsUser": 1000,
+            "seccompProfile": {
+                "type": "RuntimeDefault"
+            }
+           },
+
         "tty": true,
         "volumeMounts": [
           {
@@ -36,15 +51,13 @@ OVERRIDES_JSON=$(cat <<EOF
       {
         "name": "ssh-secret-volume",
         "secret": {
-          "secretName": "${SSH_SECRET}",
-          "defaultMode": 256
+          "secretName": "${SSH_SECRET}"
         }
       },
       {
         "name": "kubeconfig-volume",
         "secret": {
-          "secretName": "${KUBECFG_SECRET}",
-          "defaultMode": 256
+          "secretName": "${KUBECFG_SECRET}"
         }
       }
     ]
@@ -57,4 +70,4 @@ EOF
 # Note: Use the variables defined above for other flags too
 kubectl run -n "${NAMESPACE}" -i --rm --tty "${PODNAME}" \
   --overrides="${OVERRIDES_JSON}" \
-  --image=sv4.art.e2open.com/dcops-docker-repo/jumphost:v01 --restart=Never -- bash
+  --image=nrajeshdit/jumphost:v01 --restart=Never -- bash

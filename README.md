@@ -9,3 +9,7 @@ In this Repo, I maintain the scripts which i use my day2day Operation, I am sure
 rajesh-natarajan-tech/rajesh-natarajan-tech is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 You can click the Preview link to take a look at your changes.
 --->
+
+
+script name: tanzu-jumphost.sh
+which helps to create vsphere pod to ssh to tanzu worker nodes
