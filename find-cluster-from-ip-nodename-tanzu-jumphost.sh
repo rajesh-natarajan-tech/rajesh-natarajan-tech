@@ -1,15 +1,26 @@
 #!/bin/bash 
+: <<'END'
+This Script for the login to tanzu worker node using jumphost container, 
+Tanzu Kubernetes envionment secured by NSX-T Network Backend with Isolated T1 Networks, on which we cannot connect worker nodes from external network.
+This Scirt Symplifies the troubleshooting login
+
+This Script allowed to execute by DCops team members only 
+
+Author: Rajesh 
+
+END
+
+NODE=${1}
+export NODE 
 source /etc/k8s-login.conf
 current_user=$(whoami)
 empty_line=$(printf "\n")
 
 
-CLUSTER=$1
 
-export CLUSTER
 print_usage() {
 echo "Usage: tanzu-jumphost.sh <cluster-name>"
-echo "Example: tanzu-jumphost.sh sv4-dev-sharedservices"
+echo "Example: tanzu-jumphost.sh 10.244.3.36"
 }
 
 
@@ -63,35 +74,45 @@ fi
 
 export KUBECTL_VSPHERE_PASSWORD
 
-}
 
 
-pod_creation(){
+
+
 
 
 kubectl vsphere login --server=$SUPERVISOR_CLUSTER --insecure-skip-tls-verify -u $current_user > /dev/null
 
 kubectl config use-context $SUPERVISOR_CLUSTER
 
-
-while [ -z $CLUSTER ]
-do 
-kubectl get cluster -A |  awk '{print $2}'
-read -p "enter the cluster name:"    CLUSTER 
-done
-
-NAMESPACE=`kubectl get cluster -A | grep " $CLUSTER  " | awk '{print $1}'`
+echo ${empty_line} 
 
 
-printf "jumphost pod getting created for the cluster :  $CLUSTER  and Namespace $NAMESPACE "
+vmline=$(kubectl get vm  -A -o wide|grep $NODE)
+NODEIP=$(echo $vmline |awk '{print $6}')
+VM=$( echo $vmline |awk '{ print $2}')
+NAMESPACE=$( echo $vmline |awk '{ print $1}')
+cluster_input=$(kubectl get vm -n $NAMESPACE $VM --show-labels )
+cluster=$(echo $cluster_input | awk -F'[=,]' '{for(i=1;i<=NF;i++) if($i=="capw.vmware.com/cluster.name") print $(i+1)}')
+
+
+printf "jumphost pod getting created for the cluster :  $cluster_name "
+
+printf "To login manual ssh  \n \n ssh -i /secrets/ssh-secret/ssh-privatekey -o StrictHostKeyChecking=no $NODEIP " 
+
+
+
+
+
+
+
 
 
 
 #
 
-PODNAME="${CLUSTER}-jumphost-$$"
-SSH_SECRET="${CLUSTER}-ssh"
-KUBECFG_SECRET="${CLUSTER}-kubeconfig"
+PODNAME="${cluster}-jumphost"
+SSH_SECRET="${cluster}-ssh"
+KUBECFG_SECRET="${cluster}-kubeconfig"
 #
 OVERRIDES_JSON=$(cat <<EOF
 {
@@ -101,7 +122,7 @@ OVERRIDES_JSON=$(cat <<EOF
       {
         "name": "jumpbox",
         "image": "nrajeshdit/jumphost:v02",
-        "imagePullPolicy": "IfNotPresent",
+        "imagePullPolicy": "Always",
         "stdin": true,
         "stdinOnce": true,
         "securityContext": {
@@ -159,18 +180,25 @@ kubectl run -n "${NAMESPACE}" -i --rm --tty "${PODNAME}" \
   --image=nrajeshdit/jumphost:v02 --restart=Never -- bash 
 
 
+
+
 #
 }
+
+if [ -z "$1" ]; then
+	print_usage
+else
+
 
 	if id -nG "$current_user" | grep -qw "dcops"; then
   		echo "User $current_user is part of the dcops group."
 
 		get_secrets
-                pod_creation
 	else
   		echo "User $current_user is NOT part of the dcops group."
 	fi
 
+fi
 
 
 
