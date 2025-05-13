@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  vars: 
+     ansible_python_interpreter: /usr/bin/python3.9
+  vars_prompt:
+    - name: namespace
+      prompt: "Enter the namespace:" 
+    - name: cluster 
+      prompt: "Enter the Cluster Name:"
+    - name: token
+      promt: "Enter the vault token: "  
+      private: true
+
+
+
+
