@@ -1,0 +1,87 @@
+global:
+  enabled: true
+  imagePullSecrets:
+      - name: regcred
+  tlsDisable: false
+injector:
+  enabled: false
+server:
+  enabled: "-"
+  image:
+    repository: "repo.ops.e2open.com/dcops-docker-repo/hashicorp/vault"
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 1024Mi
+      cpu: 1000m
+  extraEnvironmentVars:	  
+         VAULT_SKIP_VERIFY: true	  
+  volumes:
+      - name: vault-ha-tls
+        secret:
+         defaultMode: 420
+         secretName: vault-ha-tls
+  volumeMounts:
+      - mountPath: /vault/userconfig/vault-ha-tls
+        name: vault-ha-tls
+        readOnly: true
+  dataStorage:
+    enabled: true
+    storageClass: ontap-nas
+  auditStorage:
+    enabled: true
+    storageClass: vmfs-san
+  ha:
+    enabled: true
+    replicas: 3
+    raft:
+      # Enables Raft integrated storage
+      enabled: true
+      # Set the Node Raft ID to the name of the pod
+      setNodeId: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 0
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_cert_file = "/vault/userconfig/vault-ha-tls/tls.crt"
+          tls_key_file  = "/vault/userconfig/vault-ha-tls/tls.key"
+          tls_client_ca_file = "/vault/userconfig/vault-ha-tls/ca.crt"
+          # Enable unauthenticated metrics access (necessary for Prometheus Operator)
+          telemetry {
+            unauthenticated_metrics_access = "true"
+          }
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+            retry_join {
+            leader_api_addr = "https://vault-0.vault-internal:8200"
+            leader_ca_cert_file = "/vault/userconfig/vault-ha-tls/ca.crt"
+            leader_client_cert_file = "/vault/userconfig/vault-ha-tls/tls.crt"
+            leader_client_key_file = "/vault/userconfig/vault-ha-tls/tls.key"
+          }
+          retry_join {
+            leader_api_addr = "https://vault-1.vault-internal:8200"
+            leader_ca_cert_file = "/vault/userconfig/vault-ha-tls/ca.crt"
+            leader_client_cert_file = "/vault/userconfig/vault-ha-tls/tls.crt"
+            leader_client_key_file = "/vault/userconfig/vault-ha-tls/tls.key"
+          }
+          retry_join {
+            leader_api_addr = "https://vault-2.vault-internal:8200"
+            leader_ca_cert_file = "/vault/userconfig/vault-ha-tls/ca.crt"
+            leader_client_cert_file = "/vault/userconfig/vault-ha-tls/tls.crt"
+            leader_client_key_file = "/vault/userconfig/vault-ha-tls/tls.key"
+          }
+        }
+
+        service_registration "kubernetes" {}
+
+
+ui:
+  enabled: true
+  publishNotReadyAddresses: true
