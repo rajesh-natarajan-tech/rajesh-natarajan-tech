@@ -1,0 +1,25 @@
+---
+- name: Add a pool member to F5 BIG-IP
+  hosts: localhost
+  gather_facts: no
+  vars:
+    bigip_host: "10.3.121.21"
+    bigip_user: "rnatarajan"
+    pool_name: "/Common/abc"
+    member_ip: "192.168.0.110"
+    member_port: 80
+  vars_prompt:
+    - name: "bigip_password"
+      prompt: "Enter F5 BIG-IP password"
+  tasks:
+    - name: Add member to pool
+      f5networks.f5_bigip.bigip_pool_member:
+        server: "{{ bigip_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: false
+        state: "present"
+        pool: "{{ pool_name }}"
+        name: "{{ member_ip }}"
+        port: "{{ member_port }}"
+      delegate_to: localhost
