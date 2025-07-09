@@ -1,0 +1,83 @@
+path "sv4-dev-sharedservices/data/rdm-dev/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/rdm-qa/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/rdm-devint/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/rdm-es-dev/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/rdm-es-qa/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/rdm-es-devint/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/feeds-es-dev/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/feeds-es-devint/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+
+path "sv4-dev-sharedservices/data/feeds-es-qa/*" {
+  capabilities = ["create", "update", "patch", "read", "delete","list"]
+}
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/rdm-es-qa/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/metadata/" {
+  capabilities = ["list"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/rdm-es/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/rdm/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/rdm-es-devint/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/rdm-devint/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/feeds-es-dev/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/feeds-es-devint/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/feeds-es-qa/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/kosh/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+
+path "platform/infrastructure/sv4-dev/sv4d-sharedservices-nonp/data/kosh-psr/*" {
+  capabilities = ["read", "create", "delete", "update", "list", "patch"]
+}
+path "common-secrets/data/*" {
+  capabilities = ["read","list"]
+}
+path "sv4-dev-sharedservices/metadata/*" {
+  capabilities = ["list"]
+}
