@@ -1,9 +1,0 @@
-apiVersion: v1
-data:
-  VAULT_APPROLE_ROLE_ID: ZTkwMmFjNTMtMDhjYy04NWU4LTVhYTYtMWVhNmRhZmZiOWQ4
-  VAULT_APPROLE_SECRET_ID: ZmIzOGNhNzUtZWJmNC04NTEzLTNmOTktZTc4YjU5NGM2Zjlj
-kind: Secret
-metadata:
-  name: vault-snapshot-agent-token
-  namespace: vault
-type: Opaque

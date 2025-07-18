@@ -1,0 +1,265 @@
+apiVersion: v1
+items:
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: feeds-es-dev
+      meta.helm.sh/release-namespace: feeds-es-dev
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esfeeds8-ingress-dev
+    namespace: feeds-es-dev
+  spec:
+    routes:
+    - conditions:
+      - prefix: /feeds-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /feeds-es
+          replacement: /
+      services:
+      - name: esfeeds
+        port: 9606
+    virtualhost:
+      fqdn: feeds-es-dev.dev.e2open.com
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: feeds-es-devint
+      meta.helm.sh/release-namespace: feeds-es-devint
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esfeeds8-ingress-devint
+    namespace: feeds-es-devint
+  spec:
+    routes:
+    - conditions:
+      - prefix: /feeds-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /feeds-es
+          replacement: /
+      services:
+      - name: esfeeds8
+        port: 9607
+    virtualhost:
+      fqdn: feeds-es-devint.dev.e2open.com
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: feeds-es-qa
+      meta.helm.sh/release-namespace: feeds-es-qa
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esfeeds8-ingress-qa
+    namespace: feeds-es-qa
+  spec:
+    routes:
+    - conditions:
+      - prefix: /feeds-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /feeds-es
+          replacement: /
+      services:
+      - name: esfeeds
+        port: 9606
+    virtualhost:
+      fqdn: feeds-es-qa.dev.e2open.com
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kosh-admin
+      meta.helm.sh/release-namespace: kosh-psr
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: kosh-admin-httpproxy
+    namespace: kosh-psr
+  spec:
+    routes:
+    - conditions:
+      - prefix: /kosh-admin
+      requestHeadersPolicy:
+        set:
+        - name: Accept
+          value: application/hal+json
+      services:
+      - name: kosh-admin-svc
+        port: 8080
+    virtualhost:
+      fqdn: koshadmin-psr.dev.e2open.com
+      tls:
+        secretName: wildcard.dev.e2open.com-tls
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kosh-app
+      meta.helm.sh/release-namespace: kosh-psr
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: kosh-app-httpproxy
+    namespace: kosh-psr
+  spec:
+    routes:
+    - conditions:
+      - prefix: /kosh
+      requestHeadersPolicy:
+        set:
+        - name: Accept
+          value: application/hal+json
+      services:
+      - name: kosh-app-svc
+        port: 8080
+    virtualhost:
+      fqdn: kosh-psr.dev.e2open.com
+      tls:
+        secretName: wildcard.dev.e2open.com-tls
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kosh-admin
+      meta.helm.sh/release-namespace: kosh
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: kosh-admin-httpproxy
+    namespace: kosh
+  spec:
+    routes:
+    - conditions:
+      - prefix: /kosh-admin
+      requestHeadersPolicy:
+        set:
+        - name: Accept
+          value: application/hal+json
+      services:
+      - name: kosh-admin-svc
+        port: 8080
+    virtualhost:
+      fqdn: koshadmin.dev.e2open.com
+      tls:
+        secretName: wildcard.dev.e2open.com-tls
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kosh-app
+      meta.helm.sh/release-namespace: kosh
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: kosh-app-httpproxy
+    namespace: kosh
+  spec:
+    routes:
+    - conditions:
+      - prefix: /kosh
+      requestHeadersPolicy:
+        set:
+        - name: Accept
+          value: application/hal+json
+      services:
+      - name: kosh-app-svc
+        port: 8080
+    virtualhost:
+      fqdn: kosh.dev.e2open.com
+      tls:
+        secretName: wildcard.dev.e2open.com-tls
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: rdm-es-dev
+      meta.helm.sh/release-namespace: rdm-es-dev
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esrdm8-ingress-dev
+    namespace: rdm-es-dev
+  spec:
+    routes:
+    - conditions:
+      - prefix: /rdm-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /rdm-es
+          replacement: /
+      services:
+      - name: esrdm8
+        port: 9600
+    virtualhost:
+      fqdn: rdm-es-dev.dev.e2open.com
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: rdm-es-devint
+      meta.helm.sh/release-namespace: rdm-es-devint
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esrdm8-ingress-devint
+    namespace: rdm-es-devint
+  spec:
+    routes:
+    - conditions:
+      - prefix: /rdm-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /rdm-es
+          replacement: /
+      services:
+      - name: esrdm8
+        port: 9600
+    virtualhost:
+      fqdn: rdm-es-devint.dev.e2open.com
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: rdm-es-devint-helm
+      meta.helm.sh/release-namespace: rdm-es-devint
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esrdm8-ingress-devint-helm
+    namespace: rdm-es-devint
+  spec:
+    routes:
+    - conditions:
+      - prefix: /rdm-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /rdm-es
+          replacement: /
+      services:
+      - name: esrdm8-helm
+        port: 9400
+    virtualhost:
+      fqdn: rdm-es-helm.dev.e2open.com
+- apiVersion: projectcontour.io/v1
+  kind: HTTPProxy
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: rdm-es-qa
+      meta.helm.sh/release-namespace: rdm-es-qa
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: esrdm8-ingress-qa
+    namespace: rdm-es-qa
+  spec:
+    routes:
+    - conditions:
+      - prefix: /rdm-es
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /rdm-es
+          replacement: /
+      services:
+      - name: esrdm8
+        port: 9600
+    virtualhost:
+      fqdn: rdm-es-qa.dev.e2open.com
+kind: List
+metadata: {}

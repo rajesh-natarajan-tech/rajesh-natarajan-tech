@@ -2,9 +2,26 @@
 - name: Add a pool member to F5 BIG-IP
   hosts: localhost
   gather_facts: no
+  collections:
+    - f5networks.f5_modules
   vars:
     bigip_host: "10.3.121.21"
     bigip_user: "rnatarajan"
+    pools:
+      - name: "/Common/abc"
+        add_members:
+          - ip: "192.168.0.110"
+            port: 80
+        deactivate_members:
+          - ip: "192.168.0.120"
+            port: 80
+      - name: "/Common/xyz"
+        add_members:
+          - ip: "192.168.0.210"
+            port: 8080
+        deactivate_members:
+          - ip: "192.168.0.220"
+            port: 8080
     pool_name: "/Common/abc"
     member_ip: "192.168.0.110"
     member_port: 80
@@ -13,13 +30,29 @@
       prompt: "Enter F5 BIG-IP password"
   tasks:
     - name: Add member to pool
-      f5networks.f5_bigip.bigip_pool_member:
-        server: "{{ bigip_host }}"
-        user: "{{ bigip_user }}"
-        password: "{{ bigip_password }}"
-        validate_certs: false
+      bigip_pool_member:
+        provider:
+          server: "{{ bigip_host }}"
+          user: "{{ bigip_user }}"
+          password: "{{ bigip_password }}"
+          validate_certs: false
         state: "present"
         pool: "{{ pool_name }}"
-        name: "{{ member_ip }}"
-        port: "{{ member_port }}"
+        name: "{{ add_members.member_ip }}"
+        address: "{{ add_members.member_ip }}"
+        port: "{{ add_members.member_port }}"
+      delegate_to: localhost
+
+    - name: deactivate_members member to pool
+      bigip_pool_member:
+        provider:
+          server: "{{ bigip_host }}"
+          user: "{{ bigip_user }}"
+          password: "{{ bigip_password }}"
+          validate_certs: false
+        state: "disabled"
+        pool: "{{ pool_name }}"
+        name: "{{ deactivate_members.member_ip }}"
+        address: "{{ deactivate_members.member_ip }}"
+        port: "{{ deactivate_members.member_port }}"
       delegate_to: localhost
